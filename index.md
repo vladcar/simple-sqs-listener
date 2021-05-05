@@ -1,37 +1,92 @@
-## Welcome to GitHub Pages
+# Simple AWS SQS listener
 
-You can use the [editor on GitHub](https://github.com/vladcar/simple-sqs-listener/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+It is very easy to get started with AWS SQS. However, official documentation does not offer production-ready examples of efficient polling mechanisms.
+Unlike other messaging tools, SQS requires you to write your own polling code using official SDK. Making it efficient, scalable and multithreaded is not trivial and requires a lot of boilerplate code.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+This library uses official AWS SDK (v2) and abstracts away polling from the queue with fluent configuration interface.
 
-### Markdown
+### Features
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+- One SQS queue per listener model
+- Multiple concurrent consumers per listener
+- AutoAcknowledge mode - auto delete message if `com.vladc.sqslistener.MessageHandler.handle` returns successfully
+- Long/Short polling
+- Concurrent message processing. You can provide your own thread pool or use default (see `com.vladc.sqslistener.SqsMessageListener.defaultMessageProcessorExecutor`)
 
-```markdown
-Syntax highlighted code block
 
-# Header 1
-## Header 2
-### Header 3
+### Example usage
 
-- Bulleted
-- List
+#### Plain Java
 
-1. Numbered
-2. List
+```java
+ SqsClient sqsClient = SqsClient.create();
 
-**Bold** and _Italic_ and `Code` text
+ SqsQueue queue = SqsQueue.builder()
+    .url("https://my-queue-url.com")
+    .maxBatchSize(10)
+    .visibilityTimeoutSeconds(90)
+    .longPolling(true)
+    .autoAcknowledge(true)
+    .messageHandler((meessage) -> {
+      // handle message
+    })
+    .errorHandler((message, exception) -> {
+      // handle error
+    })
+    .build();
 
-[Link](url) and ![Image](src)
+ SqsQueueMessageListener listener = new SqsQueueMessageListener(sqsClient);
+ listener.setQueue(queue);
+ listener.setConcurrentConsumers(3);
+ listener.setMessageProcessorPoolSize(31);
+ 
+ listener.initialize();
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+#### Spring Boot configuration
 
-### Jekyll Themes
+##### Prerequisites
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/vladcar/simple-sqs-listener/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+- `simple-sqs-listener-spring-boot` must be present on classpath
+- Spring Boot 2.4.0
+- AWS SDK `SqsClient` must be configured as bean
 
-### Support or Contact
+```java
+package com.example;
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+import com.vladc.sqslistener.annotation.EnableSqs;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sqs.SqsClient;
+
+@EnableSqs
+@Configuration
+public class Config {
+
+  @Bean
+  public SqsClient sqsClient() {
+    return SqsClient.builder()
+        .region(Region.EU_CENTRAL_1)
+        .credentialsProvider(ProfileCredentialsProvider.create("my-profile"))
+        .build();
+  }
+}
+```
+```java
+package com.example;
+
+import com.vladc.sqslistener.annotation.SqsMessageListenerHandler;
+import org.springframework.stereotype.Component;
+import software.amazon.awssdk.services.sqs.model.Message;
+
+@Component
+public class TestHandler {
+
+  @SqsMessageListenerHandler(queue = "tst-queue", messageProcessorPoolSize = 21, concurrentConsumers = 2)
+  public void handleMessage(Message message) {
+    System.out.println(message);
+  }
+}
+```
