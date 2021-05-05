@@ -1,7 +1,7 @@
 package com.vladc.sqslistener.autoconfigure;
 
 import com.vladc.sqslistener.SqsQueue;
-import com.vladc.sqslistener.SqsQueueMessageListener;
+import com.vladc.sqslistener.SqsMessageListener;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -16,7 +16,7 @@ public class SqsQueueMessageListenerAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   @ConditionalOnProperty(prefix = "messaging.sqs", name = "enabled", havingValue = "true")
-  public SqsQueueMessageListener messageListener(MessageListenerProperties properties,
+  public SqsMessageListener messageListener(MessageListenerProperties properties,
       SqsClient sqsClient) {
 
     SqsQueue queue = SqsQueue.builder()
@@ -27,7 +27,7 @@ public class SqsQueueMessageListenerAutoConfiguration {
         .autoAcknowledge(properties.isAutoAcknowledge())
         .build();
 
-    SqsQueueMessageListener listener = new SqsQueueMessageListener(sqsClient);
+    SqsMessageListener listener = new SqsMessageListener(sqsClient);
     listener.setQueue(queue);
     listener.setConcurrentConsumers(properties.getConcurrentConsumers());
     listener.setMessageProcessorPoolSize(properties.getMessageProcessorPoolSize());
@@ -40,4 +40,6 @@ public class SqsQueueMessageListenerAutoConfiguration {
   public SqsClient sqsClient() {
     return SqsClient.create();
   }
+
+
 }

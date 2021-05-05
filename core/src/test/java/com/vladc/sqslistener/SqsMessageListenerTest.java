@@ -17,17 +17,17 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageResponse;
 
 @ExtendWith(MockitoExtension.class)
-class SqsQueueMessageListenerTest {
+class SqsMessageListenerTest {
 
   @InjectMocks
-  private SqsQueueMessageListener underTest;
+  private SqsMessageListener underTest;
 
   @Mock
   private SqsClient mockSqsClient;
 
   @BeforeEach
   void setup() {
-    underTest = new SqsQueueMessageListener(mockSqsClient);
+    underTest = new SqsMessageListener(mockSqsClient);
     underTest.setQueue(SqsQueue.builder()
         .url("testQueue")
         .maxBatchSize(1)

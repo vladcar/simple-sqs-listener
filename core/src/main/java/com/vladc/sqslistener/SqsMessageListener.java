@@ -27,9 +27,9 @@ import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageResponse;
 
-public class SqsQueueMessageListener {
+public class SqsMessageListener {
 
-  private static final Logger log = LoggerFactory.getLogger(SqsQueueMessageListener.class);
+  private static final Logger log = LoggerFactory.getLogger(SqsMessageListener.class);
   private static final String CONSUMER_LOOP_THREAD_PREFIX = "sqs-consumer-loop";
   private static final String MESSAGE_PROCESSOR_THREAD_PREFIX = "sqs-listener";
 
@@ -45,7 +45,7 @@ public class SqsQueueMessageListener {
 
   private volatile boolean isRunning = false;
 
-  public SqsQueueMessageListener(SqsClient sqsClient) {
+  public SqsMessageListener(SqsClient sqsClient) {
     this.sqsClient = sqsClient;
   }
 

@@ -44,6 +44,10 @@ public class MessageListenerProperties {
 
   private boolean autoAcknowledge = true;
 
+  /**
+   * Not implemented. Will be available in future releases
+   */
+  private boolean enableMethodHandlers = false;
 
   public String getQueueUrl() {
     return queueUrl;
@@ -115,5 +119,13 @@ public class MessageListenerProperties {
 
   public void setAutoAcknowledge(boolean autoAcknowledge) {
     this.autoAcknowledge = autoAcknowledge;
+  }
+
+  public boolean isEnableMethodHandlers() {
+    return enableMethodHandlers;
+  }
+
+  public void setEnableMethodHandlers(boolean enableMethodHandlers) {
+    this.enableMethodHandlers = enableMethodHandlers;
   }
 }
