@@ -13,8 +13,40 @@ This library uses official AWS SDK (v2) and abstracts away polling from the queu
 - Long/Short polling
 - Concurrent message processing. You can provide your own thread pool or use default (see `com.vladc.sqslistener.SqsMessageListener.defaultMessageProcessorExecutor`)
 
+### Dependency Management
+#### Maven
 
-### Example usage
+```xml
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>io.github.vladcar</groupId>
+      <artifactId>simple-sqs-listener-bom</artifactId>
+      <version>1.0.1</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
+```
+
+Import core module for plain java usage
+```xml
+<dependency>
+  <groupId>io.github.vladcar</groupId>
+  <artifactId>simple-sqs-listener-core</artifactId>
+</dependency>
+```
+
+Import this if you use Spring Boot (includes core module transitively)
+```xml
+<dependency>
+  <groupId>io.github.vladcar</groupId>
+  <artifactId>simple-sqs-listener-spring-boot</artifactId>
+</dependency>
+```
+
+### Example Usage
 
 #### Plain Java
 
@@ -84,7 +116,7 @@ import software.amazon.awssdk.services.sqs.model.Message;
 @Component
 public class TestHandler {
 
-  @SqsMessageListenerHandler(queue = "tst-queue", messageProcessorPoolSize = 21, concurrentConsumers = 2)
+  @SqsMessageListenerHandler(queue = "test-queue")
   public void handleMessage(Message message) {
     System.out.println(message);
   }

@@ -4,11 +4,10 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>simple-sqs-listener-core</artifactId>
-  <version>1.0.0</version>
   <packaging>jar</packaging>
   <parent>
-    <groupId>com.vladc</groupId>
-    <version>1.0.0</version>
+    <groupId>io.github.vladcar</groupId>
+    <version>1.0.1</version>
     <artifactId>simple-sqs-listener</artifactId>
   </parent>
 

@@ -69,10 +69,12 @@ public class SqsMessageListener {
   }
 
   public synchronized void initialize() {
-    log.info("starting SqsMessageProcessorContainer");
     consumerLoopExecutor = createConsumerLoopExecutor();
     taskExecutor = Objects
         .requireNonNullElseGet(taskExecutor, this::defaultMessageProcessorExecutor);
+  }
+
+  public synchronized void start() {
     scheduleConsumers();
     isRunning = true;
     log.info("SqsMessageProcessorContainer started");

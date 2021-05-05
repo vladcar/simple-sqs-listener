@@ -33,13 +33,13 @@ public class SqsMessageListenerManager implements DisposableBean, SmartLifecycle
   }
 
   public void registerListener(String id, SqsMessageListener listener) {
-    log.warn("registering listener - {}", id);
+    log.debug("registering listener - {}", id);
 
     Objects.requireNonNull(listener, "SqsMessageListener must not be null");
 
     synchronized (listeners) {
       if (listeners.containsKey(id)) {
-        throw new IllegalStateException(String.format("Listener with id %s is already registered", id));
+        log.warn("Listener [{}] is already registered", id);
       }
       listeners.put(id, listener);
       applicationContext.getBeanFactory().registerSingleton(id, listener);
@@ -55,7 +55,7 @@ public class SqsMessageListenerManager implements DisposableBean, SmartLifecycle
   @Override
   public void start() {
     if (contextRefreshed) {
-      listeners.values().forEach(SqsMessageListener::initialize);
+      listeners.values().forEach(SqsMessageListener::start);
     }
   }
 
