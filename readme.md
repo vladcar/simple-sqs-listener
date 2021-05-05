@@ -30,6 +30,9 @@ This library uses official AWS SDK (v2) and abstracts away polling from the queu
     .messageHandler((meessage) -> {
       // handle message
     })
+    .errorHandler((message, exception) -> {
+      // handle error
+    })
     .build();
 
  SqsQueueMessageListener listener = new SqsQueueMessageListener(sqsClient);
