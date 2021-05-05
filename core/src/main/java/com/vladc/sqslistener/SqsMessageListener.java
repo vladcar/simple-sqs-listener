@@ -84,6 +84,10 @@ public class SqsMessageListener {
     log.info("SqsMessageProcessorContainer destroyed");
   }
 
+  public boolean isRunning() {
+    return isRunning;
+  }
+
   private ExecutorService createConsumerLoopExecutor() {
     return Executors.newFixedThreadPool(concurrentConsumers,
         ConfigurableThreadFactory.newFactory(CONSUMER_LOOP_THREAD_PREFIX));

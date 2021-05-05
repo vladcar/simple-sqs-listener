@@ -59,6 +59,24 @@ public class SqsQueue {
     return new SqsQueueBuilder();
   }
 
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SqsQueue sqsQueue = (SqsQueue) o;
+    return url.equals(sqsQueue.url);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(url);
+  }
+
   public static class SqsQueueBuilder {
 
     private String url;
