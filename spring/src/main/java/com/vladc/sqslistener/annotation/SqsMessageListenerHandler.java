@@ -35,7 +35,7 @@ public @interface SqsMessageListenerHandler {
   /**
    * Number of threads polling from this queue.
    *
-   * @apiNote Consider adjusting {@linkplain SqsMessageListenerHandler#messageProcessorPoolSize()}
+   * Consider adjusting {@linkplain SqsMessageListenerHandler#messageProcessorPoolSize()}
    * based on number of concurrent consumers and maximum batch size.
    */
   int concurrentConsumers() default 1;
@@ -43,7 +43,7 @@ public @interface SqsMessageListenerHandler {
   /**
    * Size of the pool used for invoking {@linkplain SqsMessageListenerHandler} annotated methods
    *
-   * @apiNote Consider adjusting this value based on number of concurrent consumers and maximum
+   * Consider adjusting this value based on number of concurrent consumers and maximum
    * batch size.
    */
   int messageProcessorPoolSize() default 1;
