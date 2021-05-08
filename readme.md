@@ -24,7 +24,7 @@ This library uses official AWS SDK (v2) and abstracts away polling from the queu
     <dependency>
       <groupId>io.github.vladcar</groupId>
       <artifactId>simple-sqs-listener-bom</artifactId>
-      <version>1.0.1</version>
+      <version>1.0.2</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
