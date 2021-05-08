@@ -25,23 +25,13 @@ public class SqsMessageListenerManager implements DisposableBean, SmartLifecycle
 
   private final Map<String, SqsMessageListener> listeners = new ConcurrentHashMap<>();
 
-  @Override
-  public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-    if (applicationContext instanceof ConfigurableApplicationContext) {
-      this.applicationContext = (ConfigurableApplicationContext) applicationContext;
-    }
-  }
-
   public void registerListener(String id, SqsMessageListener listener) {
-    log.debug("registering listener - {}", id);
-
     Objects.requireNonNull(listener, "SqsMessageListener must not be null");
+    if (log.isDebugEnabled()) {
+      log.debug("registering listener - {}", id);
+    }
 
-    synchronized (listeners) {
-      if (listeners.containsKey(id)) {
-        log.warn("Listener [{}] is already registered", id);
-      }
-      listeners.put(id, listener);
+    if (listeners.putIfAbsent(id, listener) == null) {
       applicationContext.getBeanFactory().registerSingleton(id, listener);
       listener.initialize();
     }
@@ -88,9 +78,17 @@ public class SqsMessageListenerManager implements DisposableBean, SmartLifecycle
   }
 
   @Override
+  public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    if (applicationContext instanceof ConfigurableApplicationContext) {
+      this.applicationContext = (ConfigurableApplicationContext) applicationContext;
+    }
+  }
+
+  @Override
   public void onApplicationEvent(ContextRefreshedEvent event) {
     if (event.getApplicationContext().equals(this.applicationContext)) {
       this.contextRefreshed = true;
+      listeners.values().forEach(SqsMessageListener::start);
     }
   }
 }

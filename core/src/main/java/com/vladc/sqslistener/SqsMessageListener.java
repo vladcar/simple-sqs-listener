@@ -40,8 +40,7 @@ public class SqsMessageListener {
   private ExecutorService consumerLoopExecutor;
   private final Map<String, Future<?>> consumerMap = new ConcurrentHashMap<>();
 
-  private int messageProcessorPoolSize = 1;
-  private int concurrentConsumers = 1;
+  private int consumerCount = 1;
 
   private volatile boolean isRunning = false;
 
@@ -49,21 +48,28 @@ public class SqsMessageListener {
     this.sqsClient = sqsClient;
   }
 
-  public void setMessageProcessorPoolSize(int messageProcessorPoolSize) {
-    this.messageProcessorPoolSize = messageProcessorPoolSize;
-  }
-
-  public void setConcurrentConsumers(int concurrentConsumers) {
+  /**
+   * Set the number of consumer threads that will pole from this queue
+   */
+  public void setConsumerCount(int consumerCount) {
     if (isRunning) {
-      adjustConsumerCount(concurrentConsumers);
+      adjustConsumerCount(consumerCount);
     }
-    this.concurrentConsumers = concurrentConsumers;
+    this.consumerCount = consumerCount;
   }
 
+  /**
+   * Set the thread pool that will invoke the {@linkplain MessageHandler}
+   */
   public void setTaskExecutor(ExecutorService taskExecutor) {
     this.taskExecutor = taskExecutor;
   }
 
+  /**
+   * Register the SQS queue with this listener.
+   *
+   * @see SqsQueue
+   */
   public void setQueue(SqsQueue queue) {
     this.queue = queue;
   }
@@ -75,6 +81,9 @@ public class SqsMessageListener {
   }
 
   public synchronized void start() {
+    if (isRunning) {
+      return;
+    }
     scheduleConsumers();
     isRunning = true;
     log.info("SqsMessageProcessorContainer started");
@@ -91,13 +100,13 @@ public class SqsMessageListener {
   }
 
   private ExecutorService createConsumerLoopExecutor() {
-    return Executors.newFixedThreadPool(concurrentConsumers,
+    return Executors.newFixedThreadPool(consumerCount,
         ConfigurableThreadFactory.newFactory(CONSUMER_LOOP_THREAD_PREFIX));
   }
 
   private ExecutorService defaultMessageProcessorExecutor() {
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(messageProcessorPoolSize,
-        messageProcessorPoolSize,
+    int poolSize = consumerCount * queue.getMaxBatchSize() + 1;
+    ThreadPoolExecutor executor = new ThreadPoolExecutor(poolSize, poolSize,
         120L, TimeUnit.SECONDS,
         new LinkedBlockingQueue<>(),
         ConfigurableThreadFactory.newFactory(MESSAGE_PROCESSOR_THREAD_PREFIX));
@@ -108,7 +117,7 @@ public class SqsMessageListener {
   }
 
   private void scheduleConsumers() {
-    for (int i = 0; i < concurrentConsumers; i++) {
+    for (int i = 0; i < consumerCount; i++) {
       consumerMap.computeIfAbsent(UUID.randomUUID().toString(),
           consumerId -> consumerLoopExecutor.submit(new QueueConsumer(queue, consumerId)));
     }
@@ -223,6 +232,8 @@ public class SqsMessageListener {
         ErrorHandler errorHandler = queue.getErrorHandler();
         if (errorHandler != null) {
           errorHandler.onError(message, e);
+        } else {
+          log.error("{} - Error processing message[{}]", queue.getUrl(), message.messageId(), e);
         }
       } finally {
         completionLatch.countDown();

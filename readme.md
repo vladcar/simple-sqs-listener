@@ -71,8 +71,7 @@ Import this if you use Spring Boot (includes core module transitively)
 
  SqsQueueMessageListener listener = new SqsQueueMessageListener(sqsClient);
  listener.setQueue(queue);
- listener.setConcurrentConsumers(3);
- listener.setMessageProcessorPoolSize(31);
+ listener.setConsumerCount(3);
  
  listener.initialize();
 ```
@@ -91,8 +90,6 @@ package com.example;
 import com.vladc.sqslistener.annotation.EnableSqs;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
 @EnableSqs
@@ -102,8 +99,6 @@ public class Config {
   @Bean
   public SqsClient sqsClient() {
     return SqsClient.builder()
-        .region(Region.EU_CENTRAL_1)
-        .credentialsProvider(ProfileCredentialsProvider.create("my-profile"))
         .build();
   }
 }
@@ -111,14 +106,14 @@ public class Config {
 ```java
 package com.example;
 
-import com.vladc.sqslistener.annotation.SqsMessageListenerHandler;
+import com.vladc.sqslistener.annotation.SqsMessageHandler;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.sqs.model.Message;
 
 @Component
 public class TestHandler {
 
-  @SqsMessageListenerHandler(queue = "test-queue")
+  @SqsMessageHandler(queue = "test-queue")
   public void handleMessage(Message message) {
     System.out.println(message);
   }
