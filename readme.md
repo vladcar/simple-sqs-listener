@@ -1,7 +1,7 @@
 # Simple AWS SQS listener
 
 ![example workflow](https://github.com/vladcar/simple-sqs-listener/actions/workflows/maven.yml/badge.svg)
-![Maven Publish](https://github.com/vladcar/simple-sqs-listener/actions/workflows/maven-publish.yml/badge.svg?branch=master)
+![Maven Publish](https://github.com/vladcar/simple-sqs-listener/actions/workflows/maven-publish.yml/badge.svg)
 
 It is very easy to get started with AWS SQS. However, official documentation does not offer production-ready examples of efficient polling mechanisms.
 Unlike other messaging tools, SQS requires you to write your own polling code using official SDK. Making it efficient, scalable and multithreaded is not trivial and requires a lot of boilerplate code.
