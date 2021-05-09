@@ -9,7 +9,7 @@
     <parent>
         <groupId>io.github.vladcar</groupId>
         <artifactId>simple-sqs-listener</artifactId>
-        <version>1.0.3-SNAPSHOT</version>
+       <version>1.0.5</version>
     </parent>
 
     <dependencyManagement>

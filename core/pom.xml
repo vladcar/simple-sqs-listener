@@ -7,7 +7,7 @@
   <packaging>jar</packaging>
   <parent>
     <groupId>io.github.vladcar</groupId>
-    <version>1.0.3-SNAPSHOT</version>
+   <version>1.0.5</version>
     <artifactId>simple-sqs-listener</artifactId>
   </parent>
 
