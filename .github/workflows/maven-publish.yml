@@ -10,7 +10,7 @@ on: [workflow_dispatch]
 
 jobs:
   build:
-
+    environment: maven
     runs-on: ubuntu-latest
 
     steps:
