@@ -134,7 +134,6 @@
                                     <gpgArguments>
                                         <arg>--pinentry-mode</arg>
                                         <arg>loopback</arg>
-                                        <arg>--no-tty</arg>
                                         <arg>--batch</arg>
                                     </gpgArguments>
                                 </configuration>
