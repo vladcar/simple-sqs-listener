@@ -116,7 +116,7 @@ import software.amazon.awssdk.services.sqs.model.Message;
 @Component
 public class TestHandler {
 
-  @SqsMessageHandler(queue = "test-queue")
+  @SqsMessageHandler(queueName = "test-queue")
   public void handleMessage(Message message) {
     System.out.println(message);
   }
