@@ -1,7 +1,9 @@
 package com.vladc.sqslistener;
 
+import com.vladc.sqslistener.SqsQueue.SqsQueueBuilder;
 import com.vladc.sqslistener.annotation.SqsMessageHandler;
 import com.vladc.sqslistener.annotation.SqsMessageHandler.AckMode;
+import com.vladc.sqslistener.annotation.SqsMessageHandler.PollMode;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
@@ -87,17 +89,22 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
     Method invocableMethod = AopUtils.selectInvocableMethod(method, bean.getClass());
     ReflectiveMessageHandler handler = new ReflectiveMessageHandler(invocableMethod, bean);
 
-    SqsQueue queue = SqsQueue.builder()
+    SqsQueueBuilder queueBuilder = SqsQueue.builder()
         .url(queueUrl)
         .maxBatchSize(handlerAnnotation.maxBatchSize())
         .visibilityTimeoutSeconds(handlerAnnotation.visibilityTimeout())
-        .longPolling(handlerAnnotation.longPolling())
-        .messageHandler(handler)
+        .longPolling(handlerAnnotation.pollMode().equals(PollMode.LONG))
         .autoAcknowledge(handlerAnnotation.ackMode().equals(AckMode.AUTO))
-        .build();
+        .messageHandler(handler)
+        .errorHandler(getErrorHandler(handlerAnnotation));
+
+    SqsConfigurer configurer = getConfigurer(handlerAnnotation);
+    if (configurer != null) {
+      configurer.configure(queueBuilder);
+    }
 
     SqsMessageListener listener = new SqsMessageListener(sqsClient);
-    listener.setQueue(queue);
+    listener.setQueue(queueBuilder.build());
     listener.setConsumerCount(handlerAnnotation.concurrency());
     resolveTaskExecutor(handlerAnnotation, listener);
     sqsMessageListenerManager.registerListener(handlerAnnotation.queueName(), listener);
@@ -110,6 +117,9 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
   }
 
   private String getQueueUrl(SqsMessageHandler handler) {
+    if (handler.queueName().isEmpty()) {
+      return "";
+    }
     try {
       return sqsClient.getQueueUrl(GetQueueUrlRequest.builder()
           .queueName(handler.queueName())
@@ -121,6 +131,9 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
   }
 
   private void resolveTaskExecutor(SqsMessageHandler handler, SqsMessageListener listener) {
+    if (handler.executor().isEmpty()) {
+      return;
+    }
     TaskExecutor taskExecutor = (TaskExecutor) resolver
         .evaluate(handler.executor(), this.expressionContext);
     if (taskExecutor == null) {
@@ -131,6 +144,30 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
           "Only instances of ThreadPoolTaskExecutor are supported by @SqsMessageHandler#executor");
     }
     listener.setTaskExecutor(((ThreadPoolTaskExecutor) taskExecutor).getThreadPoolExecutor());
+  }
+
+  private SqsConfigurer getConfigurer(SqsMessageHandler handler) {
+    if (handler.config().isEmpty()) {
+      return null;
+    }
+    try {
+      return (SqsConfigurer) resolver
+          .evaluate(handler.config(), this.expressionContext);
+    } catch (BeansException e) {
+      throw new IllegalStateException("Failed to register SqsQueue bean", e);
+    }
+  }
+
+  private ErrorHandler getErrorHandler(SqsMessageHandler handler) {
+    if (handler.exceptionHandler().isEmpty()) {
+      return null;
+    }
+    try {
+      return (ErrorHandler) resolver
+          .evaluate(handler.exceptionHandler(), this.expressionContext);
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to register error handler bean", e);
+    }
   }
 
   @Override

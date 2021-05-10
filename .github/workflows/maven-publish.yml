@@ -3,10 +3,11 @@
 
 name: Maven Publish
 
-# on:
-#   release:
-#     types: [published]
-on: [workflow_dispatch]
+on:
+  release:
+    types: [published]
+
+#on: [workflow_dispatch]
 
 jobs:
   build:
