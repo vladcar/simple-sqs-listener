@@ -19,7 +19,7 @@
     <dependency>
       <groupId>io.github.vladcar</groupId>
       <artifactId>simple-sqs-listener-spring-boot</artifactId>
-      <version>1.2.0</version>
+      <version>1.2.1</version>
     </dependency>
   </dependencies>
 

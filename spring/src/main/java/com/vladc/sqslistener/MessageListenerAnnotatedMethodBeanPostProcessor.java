@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.framework.AopInfrastructureBean;
@@ -48,6 +50,7 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
 
   private BeanExpressionContext expressionContext;
   private BeanExpressionResolver resolver = new StandardBeanExpressionResolver();
+  private final AtomicInteger queueCounter = new AtomicInteger(1);
 
   public MessageListenerAnnotatedMethodBeanPostProcessor(
       SqsMessageListenerManager sqsMessageListenerManager,
@@ -112,7 +115,8 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
     listener.setQueue(queueBuilder.build());
     listener.setConsumerCount(handlerAnnotation.concurrency());
     resolveTaskExecutor(handlerAnnotation, listener);
-    sqsMessageListenerManager.registerListener(handlerAnnotation.queueName(), listener);
+    sqsMessageListenerManager.registerListener(handlerAnnotation.queueName()
+            + "queue%s".formatted(queueCounter.getAndIncrement()), listener);
   }
 
   private Map<Method, SqsMessageHandler> getHandlerMethods(Class<?> targetClass) {
@@ -123,7 +127,7 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
 
   private String getQueueUrl(SqsMessageHandler handler) {
     if (handler.queueName().isEmpty()) {
-      return "";
+      return null;
     }
     try {
       return sqsClient.getQueueUrl(GetQueueUrlRequest.builder()
