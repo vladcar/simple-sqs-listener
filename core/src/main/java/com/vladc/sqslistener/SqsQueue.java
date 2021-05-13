@@ -18,7 +18,7 @@ public class SqsQueue {
    *
    * @see ReceiveMessageRequest#maxNumberOfMessages()
    */
-  private final int maxBatchSize;
+  private final Integer maxBatchSize;
 
   /**
    * The duration (in seconds) that the received messages are hidden from subsequent retrieve
@@ -26,7 +26,7 @@ public class SqsQueue {
    *
    * @see ReceiveMessageRequest#visibilityTimeout()
    */
-  private final int visibilityTimeoutSeconds;
+  private final Integer visibilityTimeoutSeconds;
 
   /**
    * The handler invoked by {@linkplain SqsMessageListener} on each received {@linkplain Message}
@@ -58,11 +58,9 @@ public class SqsQueue {
    */
   private final Boolean autoAcknowledge;
 
-  private SqsQueue(String url, int maxBatchSize, int visibilityTimeoutSeconds,
+  private SqsQueue(String url, Integer maxBatchSize, Integer visibilityTimeoutSeconds,
       Boolean longPolling, MessageHandler messageHandler,
       ErrorHandler errorHandler, Boolean autoAcknowledge) {
-    Objects.requireNonNull(messageHandler, "MessageHandler must be non-null");
-    Objects.requireNonNull(url, "Queue url must be non-null");
 
     this.url = url;
     this.maxBatchSize = maxBatchSize;
@@ -77,11 +75,11 @@ public class SqsQueue {
     return url;
   }
 
-  public int getMaxBatchSize() {
+  public Integer getMaxBatchSize() {
     return maxBatchSize;
   }
 
-  public int getVisibilityTimeoutSeconds() {
+  public Integer getVisibilityTimeoutSeconds() {
     return visibilityTimeoutSeconds;
   }
 
@@ -105,6 +103,16 @@ public class SqsQueue {
     return new SqsQueueBuilder();
   }
 
+  public SqsQueueBuilder toBuilder() {
+    return new SqsQueueBuilder()
+        .url(this.url)
+        .maxBatchSize(this.maxBatchSize)
+        .visibilityTimeoutSeconds(this.visibilityTimeoutSeconds)
+        .longPolling(this.longPolling)
+        .messageHandler(this.messageHandler)
+        .errorHandler(this.errorHandler)
+        .autoAcknowledge(this.autoAcknowledge);
+  }
 
   @Override
   public boolean equals(Object o) {
@@ -126,8 +134,8 @@ public class SqsQueue {
   public static class SqsQueueBuilder {
 
     private String url;
-    private int maxBatchSize;
-    private int visibilityTimeoutSeconds;
+    private Integer maxBatchSize;
+    private Integer visibilityTimeoutSeconds;
     private Boolean longPolling;
     private MessageHandler messageHandler;
     private ErrorHandler errorHandler;
@@ -138,12 +146,12 @@ public class SqsQueue {
       return this;
     }
 
-    public SqsQueueBuilder maxBatchSize(int maxBatchSize) {
+    public SqsQueueBuilder maxBatchSize(Integer maxBatchSize) {
       this.maxBatchSize = maxBatchSize;
       return this;
     }
 
-    public SqsQueueBuilder visibilityTimeoutSeconds(int visibilityTimeoutSeconds) {
+    public SqsQueueBuilder visibilityTimeoutSeconds(Integer visibilityTimeoutSeconds) {
       this.visibilityTimeoutSeconds = visibilityTimeoutSeconds;
       return this;
     }

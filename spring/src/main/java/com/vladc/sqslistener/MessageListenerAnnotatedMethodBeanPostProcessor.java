@@ -7,6 +7,7 @@ import com.vladc.sqslistener.annotation.SqsMessageHandler.PollMode;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -85,23 +86,27 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
   private void processListenerMethods(SqsMessageHandler handlerAnnotation, Method method,
       Object bean) {
 
-    String queueUrl = getQueueUrl(handlerAnnotation);
     Method invocableMethod = AopUtils.selectInvocableMethod(method, bean.getClass());
-    ReflectiveMessageHandler handler = new ReflectiveMessageHandler(invocableMethod, bean);
+    Optional<SqsQueue> queueOpt = getQueue(handlerAnnotation);
 
     SqsQueueBuilder queueBuilder = SqsQueue.builder()
-        .url(queueUrl)
-        .maxBatchSize(handlerAnnotation.maxBatchSize())
-        .visibilityTimeoutSeconds(handlerAnnotation.visibilityTimeout())
-        .longPolling(handlerAnnotation.pollMode().equals(PollMode.LONG))
-        .autoAcknowledge(handlerAnnotation.ackMode().equals(AckMode.AUTO))
-        .messageHandler(handler)
-        .errorHandler(getErrorHandler(handlerAnnotation));
+        .url(queueOpt.map(SqsQueue::getUrl)
+            .orElseGet(() -> getQueueUrl(handlerAnnotation)))
+        .maxBatchSize(queueOpt.map(SqsQueue::getMaxBatchSize)
+            .orElseGet(handlerAnnotation::maxBatchSize))
+        .visibilityTimeoutSeconds(queueOpt.map(SqsQueue::getVisibilityTimeoutSeconds)
+            .orElseGet(handlerAnnotation::visibilityTimeout))
+        .longPolling(queueOpt.map(SqsQueue::isLongPolling)
+            .orElse(handlerAnnotation.pollMode().equals(PollMode.LONG)))
+        .autoAcknowledge(queueOpt.map(SqsQueue::isAutoAcknowledge)
+            .orElse(handlerAnnotation.ackMode().equals(AckMode.AUTO)))
+        .messageHandler(queueOpt.map(SqsQueue::getMessageHandler)
+            .orElseGet(() -> new ReflectiveMessageHandler(invocableMethod, bean)))
+        .errorHandler(queueOpt.map(SqsQueue::getErrorHandler)
+            .orElseGet(() -> getErrorHandler(handlerAnnotation)));
 
-    SqsConfigurer configurer = getConfigurer(handlerAnnotation);
-    if (configurer != null) {
-      configurer.configure(queueBuilder);
-    }
+    Optional<SqsConfigurer> configurer = getConfigurer(handlerAnnotation);
+    configurer.ifPresent(c -> c.configure(queueBuilder));
 
     SqsMessageListener listener = new SqsMessageListener(sqsClient);
     listener.setQueue(queueBuilder.build());
@@ -146,13 +151,25 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
     listener.setTaskExecutor(((ThreadPoolTaskExecutor) taskExecutor).getThreadPoolExecutor());
   }
 
-  private SqsConfigurer getConfigurer(SqsMessageHandler handler) {
+  private Optional<SqsConfigurer> getConfigurer(SqsMessageHandler handler) {
     if (handler.config().isEmpty()) {
-      return null;
+      return Optional.empty();
     }
     try {
-      return (SqsConfigurer) resolver
-          .evaluate(handler.config(), this.expressionContext);
+      return Optional.ofNullable((SqsConfigurer) resolver
+          .evaluate(handler.config(), this.expressionContext));
+    } catch (BeansException e) {
+      throw new IllegalStateException("Failed to register SqsQueue bean", e);
+    }
+  }
+
+  private Optional<SqsQueue> getQueue(SqsMessageHandler handler) {
+    if (handler.queue().isEmpty()) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.ofNullable((SqsQueue) resolver
+          .evaluate(handler.queue(), this.expressionContext));
     } catch (BeansException e) {
       throw new IllegalStateException("Failed to register SqsQueue bean", e);
     }

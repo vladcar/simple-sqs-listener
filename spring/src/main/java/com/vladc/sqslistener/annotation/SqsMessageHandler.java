@@ -3,6 +3,7 @@ package com.vladc.sqslistener.annotation;
 import com.vladc.sqslistener.ErrorHandler;
 import com.vladc.sqslistener.SqsConfigurer;
 import com.vladc.sqslistener.SqsMessageListener;
+import com.vladc.sqslistener.SqsQueue;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -43,12 +44,12 @@ public @interface SqsMessageHandler {
   String queueName() default "";
 
   /**
-   * {@linkplain SqsConfigurer} bean. Useful when queue configuration is not constant e.g. queue url
-   * comes from environment variable. Attributes specified in SqsConfigurer bean take precedence
-   * over annotation attributes. Use SpEL expression e.g {@code @SqsMessageHandler(config =
+   * {@linkplain SqsQueue} bean. Useful when queue configuration is not constant e.g. queue url
+   * comes from environment variable. Attributes specified in SqsQueue bean take precedence over
+   * annotation attributes. Use SpEL expression e.g {@code @SqsMessageHandler(queue =
    * "#{@myQueue}")}.
    */
-  @Language("SpEL") String config() default "";
+  @Language("SpEL") String queue() default "";
 
   /**
    * Maximum number of messages to return from single receiveMessage call. Valid values: 1 to 10.
@@ -88,6 +89,17 @@ public @interface SqsMessageHandler {
    */
   @Language("SpEL") String exceptionHandler() default "";
 
+  /**
+   * {@linkplain SqsConfigurer} bean. Useful when queue configuration is not constant e.g. queue url
+   * comes from environment variable. Attributes specified in SqsConfigurer bean take precedence
+   * over annotation attributes. Use SpEL expression e.g {@code @SqsMessageHandler(config =
+   * "#{@myQueue}")}.
+   *
+   * @deprecated use {@link #queue()}
+   */
+  @Deprecated
+  @Language("SpEL") String config() default "";
+
   enum AckMode {
 
     /**
@@ -100,7 +112,7 @@ public @interface SqsMessageHandler {
      * Messages are not removed from the queue automatically. Using this mode means manually
      * deleting messages from the queue.
      */
-    MANUAL
+    MANUAL;
   }
 
   enum PollMode {
