@@ -19,7 +19,7 @@ This library uses official AWS SDK (v2) and abstracts away polling from the queu
 ### Dependency Management
 #### Maven
 
-[https://search.maven.org/artifact/io.github.vladcar/simple-sqs-listener-bom](search.maven.org/artifact/io.github.vladcar/simple-sqs-listener-bom)
+[maven central](https://search.maven.org/artifact/io.github.vladcar/simple-sqs-listener-bom)
 
 ```xml
 <dependencyManagement>
