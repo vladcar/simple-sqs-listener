@@ -1,5 +1,8 @@
 # Simple AWS SQS listener
 
+![example workflow](https://github.com/vladcar/simple-sqs-listener/actions/workflows/maven.yml/badge.svg)
+![Maven Publish](https://github.com/vladcar/simple-sqs-listener/actions/workflows/maven-publish.yml/badge.svg)
+
 It is very easy to get started with AWS SQS. However, official documentation does not offer production-ready examples of efficient polling mechanisms.
 Unlike other messaging tools, SQS requires you to write your own polling code using official SDK. Making it efficient, scalable and multithreaded is not trivial and requires a lot of boilerplate code.
 
@@ -16,13 +19,15 @@ This library uses official AWS SDK (v2) and abstracts away polling from the queu
 ### Dependency Management
 #### Maven
 
+[maven central](https://search.maven.org/artifact/io.github.vladcar/simple-sqs-listener-bom)
+
 ```xml
 <dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>io.github.vladcar</groupId>
       <artifactId>simple-sqs-listener-bom</artifactId>
-      <version>1.0.1</version>
+      <version>find latest version in maven central</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
@@ -69,8 +74,7 @@ Import this if you use Spring Boot (includes core module transitively)
 
  SqsQueueMessageListener listener = new SqsQueueMessageListener(sqsClient);
  listener.setQueue(queue);
- listener.setConcurrentConsumers(3);
- listener.setMessageProcessorPoolSize(31);
+ listener.setConsumerCount(3);
  
  listener.initialize();
 ```
@@ -89,8 +93,6 @@ package com.example;
 import com.vladc.sqslistener.annotation.EnableSqs;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
 @EnableSqs
@@ -100,8 +102,6 @@ public class Config {
   @Bean
   public SqsClient sqsClient() {
     return SqsClient.builder()
-        .region(Region.EU_CENTRAL_1)
-        .credentialsProvider(ProfileCredentialsProvider.create("my-profile"))
         .build();
   }
 }
@@ -109,17 +109,18 @@ public class Config {
 ```java
 package com.example;
 
-import com.vladc.sqslistener.annotation.SqsMessageListenerHandler;
+import com.vladc.sqslistener.annotation.SqsMessageHandler;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.sqs.model.Message;
 
 @Component
 public class TestHandler {
 
-  @SqsMessageListenerHandler(queue = "test-queue")
+  @SqsMessageHandler(queueName = "test-queue")
   public void handleMessage(Message message) {
     System.out.println(message);
   }
 }
 ```
 
+Complete spring-boot configuration in [examples](./examples/src/main/java/examples/springboot)
