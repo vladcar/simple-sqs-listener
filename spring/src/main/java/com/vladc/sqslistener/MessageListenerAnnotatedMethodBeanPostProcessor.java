@@ -111,12 +111,15 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
     Optional<SqsConfigurer> configurer = getConfigurer(handlerAnnotation);
     configurer.ifPresent(c -> c.configure(queueBuilder));
 
-    SqsMessageListener listener = new SqsMessageListener(sqsClient);
-    listener.setQueue(queueBuilder.build());
-    listener.setConsumerCount(handlerAnnotation.concurrency());
+    SqsMessageListener listener = SqsMessageListener.builder()
+        .client(sqsClient)
+        .queue(queueBuilder.build())
+        .consumerCount(handlerAnnotation.concurrency())
+        .autoStart(false)
+        .build();
     resolveTaskExecutor(handlerAnnotation, listener);
-    sqsMessageListenerManager.registerListener(handlerAnnotation.queueName()
-            + "queue%s".formatted(queueCounter.getAndIncrement()), listener);
+    sqsMessageListenerManager.registerListener("%s-queue%s"
+            .formatted(handlerAnnotation.queueName(), queueCounter.getAndIncrement()), listener);
   }
 
   private Map<Method, SqsMessageHandler> getHandlerMethods(Class<?> targetClass) {

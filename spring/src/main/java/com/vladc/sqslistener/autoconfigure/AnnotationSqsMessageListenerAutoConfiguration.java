@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(EnableSqs.class)
 @EnableConfigurationProperties(MessageListenerProperties.class)
 @ConditionalOnProperty(prefix = "messaging.sqs", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -26,6 +26,7 @@ public class AnnotationSqsMessageListenerAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean
   public SqsMessageListenerManager sqsMessageListenerManager() {
     return new SqsMessageListenerManager();
   }

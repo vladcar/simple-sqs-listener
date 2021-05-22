@@ -44,8 +44,25 @@ public class SqsMessageListener {
 
   private volatile boolean isRunning = false;
 
+  public static SqsMessageListenerBuilder builder() {
+    return new SqsMessageListenerBuilder();
+  }
+
   public SqsMessageListener(SqsClient sqsClient) {
     this.sqsClient = sqsClient;
+  }
+
+  public SqsMessageListener(SqsClient sqsClient, int consumerCount, ExecutorService taskExecutor,
+      SqsQueue queue, boolean autoStart) {
+    this.sqsClient = Objects.requireNonNull(sqsClient);
+    this.consumerCount = consumerCount;
+    this.taskExecutor = taskExecutor;
+    this.queue = Objects.requireNonNull(queue);
+
+    if (autoStart) {
+      initialize();
+      start();
+    }
   }
 
   /**
