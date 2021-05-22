@@ -65,7 +65,7 @@ public class SqsMessageListenerManager implements DisposableBean, SmartLifecycle
   }
 
   @Override
-  public void destroy() throws Exception {
+  public void destroy() {
     listeners.values().forEach(listener -> {
       if (listener instanceof DisposableBean) {
         try {

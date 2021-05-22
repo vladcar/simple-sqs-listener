@@ -56,27 +56,40 @@ Import this if you use Spring Boot (includes core module transitively)
 #### Plain Java
 
 ```java
- SqsClient sqsClient = SqsClient.create();
+package examples;
 
- SqsQueue queue = SqsQueue.builder()
-    .url("https://my-queue-url.com")
-    .maxBatchSize(10)
-    .visibilityTimeoutSeconds(90)
-    .longPolling(true)
-    .autoAcknowledge(true)
-    .messageHandler((meessage) -> {
-      // handle message
-    })
-    .errorHandler((message, exception) -> {
-      // handle error
-    })
-    .build();
+import com.vladc.sqslistener.SqsMessageListener;
+import com.vladc.sqslistener.SqsQueue;
+import software.amazon.awssdk.services.sqs.SqsClient;
 
- SqsQueueMessageListener listener = new SqsQueueMessageListener(sqsClient);
- listener.setQueue(queue);
- listener.setConsumerCount(3);
- 
- listener.initialize();
+public class Example {
+
+  public static void main(String[] args) {
+    SqsClient sqsClient = SqsClient.create();
+
+    SqsQueue queue = SqsQueue.builder()
+        .url("https://my-queue-url.com")
+        .maxBatchSize(10)
+        .visibilityTimeoutSeconds(90)
+        .longPolling(true)
+        .autoAcknowledge(true)
+        .messageHandler((message) -> {
+          // handle message
+        })
+        .errorHandler((message, exception) -> {
+          // handle error
+        })
+        .build();
+
+    SqsMessageListener listener = SqsMessageListener.builder()
+        .client(sqsClient)
+        .queue(queue)
+        .consumerCount(2)
+        .autoStart(true)
+        .build();
+  }
+}
+
 ```
 
 #### Spring Boot configuration
