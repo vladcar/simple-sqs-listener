@@ -13,18 +13,6 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 @Configuration
 public class Config {
 
-  @Value("${my-sqs-queue.url}")
-  private String queueUrl;
-
-  @Bean(name = "myQueue")
-  public SqsQueue queue() {
-    return SqsQueue.builder()
-        .url(queueUrl)
-        .maxBatchSize(10)
-        .visibilityTimeoutSeconds(120)
-        .build();
-  }
-
   @Bean(name = "sqsListenerExec")
   public TaskExecutor taskExecutor() {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();

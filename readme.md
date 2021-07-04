@@ -129,7 +129,10 @@ import software.amazon.awssdk.services.sqs.model.Message;
 @Component
 public class TestHandler {
 
-  @SqsMessageHandler(queueName = "test-queue")
+  @SqsMessageHandler(
+      queueUrl = "${my-sqs-queue.url}",
+      executor = "#{@sqsListenerExec}",
+      concurrency = "${my-sqs-queue.concurrency}")
   public void handleMessage(Message message) {
     System.out.println(message);
   }
