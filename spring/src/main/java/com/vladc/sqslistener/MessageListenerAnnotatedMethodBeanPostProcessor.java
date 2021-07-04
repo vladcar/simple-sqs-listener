@@ -33,8 +33,6 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
-import software.amazon.awssdk.services.sqs.model.QueueDoesNotExistException;
 
 public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPostProcessor,
     BeanFactoryAware, Ordered {
@@ -49,6 +47,7 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
       .newSetFromMap(new ConcurrentHashMap<>());
 
   private BeanExpressionContext expressionContext;
+  private ConfigurableListableBeanFactory beanFactory;
   private BeanExpressionResolver resolver = new StandardBeanExpressionResolver();
   private final AtomicInteger queueCounter = new AtomicInteger(1);
 
@@ -94,11 +93,11 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
 
     SqsQueueBuilder queueBuilder = SqsQueue.builder()
         .url(queueOpt.map(SqsQueue::getUrl)
-            .orElseGet(() -> getQueueUrl(handlerAnnotation)))
+            .orElseGet(() -> resolveToString(handlerAnnotation.queueUrl())))
         .maxBatchSize(queueOpt.map(SqsQueue::getMaxBatchSize)
-            .orElseGet(handlerAnnotation::maxBatchSize))
+            .orElseGet(() -> resolveToInteger(handlerAnnotation.maxBatchSize())))
         .visibilityTimeoutSeconds(queueOpt.map(SqsQueue::getVisibilityTimeoutSeconds)
-            .orElseGet(handlerAnnotation::visibilityTimeout))
+            .orElseGet(() -> resolveToInteger(handlerAnnotation.visibilityTimeout())))
         .longPolling(queueOpt.map(SqsQueue::isLongPolling)
             .orElse(handlerAnnotation.pollMode().equals(PollMode.LONG)))
         .autoAcknowledge(queueOpt.map(SqsQueue::isAutoAcknowledge)
@@ -108,38 +107,21 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
         .errorHandler(queueOpt.map(SqsQueue::getErrorHandler)
             .orElseGet(() -> getErrorHandler(handlerAnnotation)));
 
-    Optional<SqsConfigurer> configurer = getConfigurer(handlerAnnotation);
-    configurer.ifPresent(c -> c.configure(queueBuilder));
-
     SqsMessageListener listener = SqsMessageListener.builder()
         .client(sqsClient)
         .queue(queueBuilder.build())
-        .consumerCount(handlerAnnotation.concurrency())
+        .consumerCount(resolveToInteger(handlerAnnotation.concurrency()))
         .autoStart(false)
         .build();
     resolveTaskExecutor(handlerAnnotation, listener);
-    sqsMessageListenerManager.registerListener("%s-queue%s"
-            .formatted(handlerAnnotation.queueName(), queueCounter.getAndIncrement()), listener);
+    sqsMessageListenerManager.registerListener("queue%s"
+            .formatted(queueCounter.getAndIncrement()), listener);
   }
 
   private Map<Method, SqsMessageHandler> getHandlerMethods(Class<?> targetClass) {
     return MethodIntrospector.selectMethods(
         targetClass, (MetadataLookup<SqsMessageHandler>) method ->
             AnnotatedElementUtils.findMergedAnnotation(method, SqsMessageHandler.class));
-  }
-
-  private String getQueueUrl(SqsMessageHandler handler) {
-    if (handler.queueName().isEmpty()) {
-      return null;
-    }
-    try {
-      return sqsClient.getQueueUrl(GetQueueUrlRequest.builder()
-          .queueName(handler.queueName())
-          .build()).queueUrl();
-    } catch (QueueDoesNotExistException e) {
-      log.error("Queue {} not found", handler.queueName(), e);
-      throw new IllegalArgumentException(e);
-    }
   }
 
   private void resolveTaskExecutor(SqsMessageHandler handler, SqsMessageListener listener) {
@@ -158,16 +140,23 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
     listener.setTaskExecutor(((ThreadPoolTaskExecutor) taskExecutor).getThreadPoolExecutor());
   }
 
-  private Optional<SqsConfigurer> getConfigurer(SqsMessageHandler handler) {
-    if (handler.config().isEmpty()) {
-      return Optional.empty();
+  private String resolveToString(String value) {
+    Object resolved = resolveSpEl(value);
+    if (resolved instanceof String) {
+      return (String) resolved;
+    } else {
+      throw new IllegalArgumentException("Unable to evaluate %s as String".formatted(value));
     }
-    try {
-      return Optional.ofNullable((SqsConfigurer) resolver
-          .evaluate(handler.config(), this.expressionContext));
-    } catch (BeansException e) {
-      throw new IllegalStateException("Failed to register SqsQueue bean", e);
-    }
+  }
+
+  private Integer resolveToInteger(String value) {
+    Object resolved = resolveSpEl(value);
+    return Integer.valueOf((String) resolved);
+  }
+
+  private Object resolveSpEl(String value) {
+    String resolved = this.beanFactory.resolveEmbeddedValue(value);
+    return resolver.evaluate(resolved, this.expressionContext);
   }
 
   private Optional<SqsQueue> getQueue(SqsMessageHandler handler) {
@@ -202,9 +191,11 @@ public class MessageListenerAnnotatedMethodBeanPostProcessor implements BeanPost
   @Override
   public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
     if (beanFactory instanceof ConfigurableListableBeanFactory) {
-      this.resolver = ((ConfigurableListableBeanFactory) beanFactory).getBeanExpressionResolver();
-      this.expressionContext = new BeanExpressionContext(
-          (ConfigurableListableBeanFactory) beanFactory, null);
+      ConfigurableListableBeanFactory configurableListableBeanFactory =
+          (ConfigurableListableBeanFactory) beanFactory;
+      this.beanFactory = configurableListableBeanFactory;
+      this.resolver = configurableListableBeanFactory.getBeanExpressionResolver();
+      this.expressionContext = new BeanExpressionContext(configurableListableBeanFactory, null);
     }
   }
 }

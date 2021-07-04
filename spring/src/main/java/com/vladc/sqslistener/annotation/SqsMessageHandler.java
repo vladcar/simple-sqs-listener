@@ -1,7 +1,6 @@
 package com.vladc.sqslistener.annotation;
 
 import com.vladc.sqslistener.ErrorHandler;
-import com.vladc.sqslistener.SqsConfigurer;
 import com.vladc.sqslistener.SqsMessageListener;
 import com.vladc.sqslistener.SqsQueue;
 import java.lang.annotation.Documented;
@@ -18,14 +17,18 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 /**
  * Configures new {@linkplain SqsMessageListener} using annotation arguments. Annotated method will
  * be registered as message handler for created listener. Currently supported signatures:
+ *
  * <ul>
- * <li>{@link Message} complete SQS message being processed.</li>
+ *   <li>{@link Message} complete SQS message being processed.
  * </ul>
+ *
  * Exception handling
+ *
  * <ul>
- *   <li>Any exception thrown for this method will be caught and logged by listener</li>
- *   <li>A bean provided in {@linkplain SqsMessageHandler#exceptionHandler()} will be called</li>
- *   <li>Exception will prevent message from being auto-acknowledged if {@linkplain #ackMode()} is set to AUTO</li>
+ *   <li>Any exception thrown for this method will be caught and logged by listener
+ *   <li>A bean provided in {@linkplain SqsMessageHandler#exceptionHandler()} will be called
+ *   <li>Exception will prevent message from being auto-acknowledged if {@linkplain #ackMode()} is
+ *       set to AUTO
  * </ul>
  *
  * @see SqsMessageListener
@@ -39,24 +42,29 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 public @interface SqsMessageHandler {
 
   /**
-   * AWS SQS queue name. Used for retrieving the url of the queue
+   * AWS SQS queue url.
+   *
+   * @return the queue url or expression (SpEL)
    */
-  String queueName() default "";
+  @Language("SpEL")
+  String queueUrl() default "";
 
   /**
-   * {@linkplain SqsQueue} bean. Useful when queue configuration is not constant e.g. queue url
-   * comes from environment variable. Attributes specified in SqsQueue bean take precedence over
+   * {@linkplain SqsQueue} bean. Attributes specified in SqsQueue bean take precedence over
    * annotation attributes. Use SpEL expression e.g {@code @SqsMessageHandler(queue =
    * "#{@myQueue}")}.
    */
-  @Language("SpEL") String queue() default "";
+  @Language("SpEL")
+  String queue() default "";
 
   /**
    * Maximum number of messages to return from single receiveMessage call. Valid values: 1 to 10.
    *
+   * @return maximum batch size or expression (SpEL)
    * @see ReceiveMessageRequest#maxNumberOfMessages()
    */
-  int maxBatchSize() default 10;
+  @Language("SpEL")
+  String maxBatchSize() default "10";
 
   /**
    * The duration (in seconds) that the received messages are hidden from subsequent retrieve
@@ -64,12 +72,12 @@ public @interface SqsMessageHandler {
    *
    * @see ReceiveMessageRequest#visibilityTimeout()
    */
-  int visibilityTimeout() default 60;
+  @Language("SpEL")
+  String visibilityTimeout() default "60";
 
-  /**
-   * Number of threads polling from this queue.
-   */
-  int concurrency() default 1;
+  /** Number of threads polling from this queue. */
+  @Language("SpEL")
+  String concurrency() default "1";
 
   PollMode pollMode() default PollMode.LONG;
 
@@ -81,24 +89,15 @@ public @interface SqsMessageHandler {
    * executor = "#{@sqsListenerExec}")}. Note that bean must be {@linkplain ThreadPoolTaskExecutor}
    * type
    */
-  @Language("SpEL") String executor() default "";
+  @Language("SpEL")
+  String executor() default "";
 
   /**
    * {@linkplain ErrorHandler} bean that will be called when @SqsMessageHandler method throws an
    * exception
    */
-  @Language("SpEL") String exceptionHandler() default "";
-
-  /**
-   * {@linkplain SqsConfigurer} bean. Useful when queue configuration is not constant e.g. queue url
-   * comes from environment variable. Attributes specified in SqsConfigurer bean take precedence
-   * over annotation attributes. Use SpEL expression e.g {@code @SqsMessageHandler(config =
-   * "#{@myQueue}")}.
-   *
-   * @deprecated use {@link #queue()}
-   */
-  @Deprecated
-  @Language("SpEL") String config() default "";
+  @Language("SpEL")
+  String exceptionHandler() default "";
 
   enum AckMode {
 
