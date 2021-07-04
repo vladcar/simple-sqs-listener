@@ -26,6 +26,7 @@
         <module>bom</module>
         <module>core</module>
         <module>spring</module>
+        <module>examples</module>
     </modules>
 
     <dependencyManagement>

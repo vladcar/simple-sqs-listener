@@ -52,8 +52,12 @@ public class SqsMessageListener {
     this.sqsClient = sqsClient;
   }
 
-  public SqsMessageListener(SqsClient sqsClient, int consumerCount, ExecutorService taskExecutor,
-      SqsQueue queue, boolean autoStart) {
+  public SqsMessageListener(
+      SqsClient sqsClient,
+      int consumerCount,
+      ExecutorService taskExecutor,
+      SqsQueue queue,
+      boolean autoStart) {
     this.sqsClient = Objects.requireNonNull(sqsClient);
     this.consumerCount = consumerCount;
     this.taskExecutor = taskExecutor;
@@ -65,9 +69,7 @@ public class SqsMessageListener {
     }
   }
 
-  /**
-   * Set the number of consumer threads that will pole from this queue
-   */
+  /** Set the number of consumer threads that will pole from this queue */
   public void setConsumerCount(int consumerCount) {
     if (isRunning) {
       adjustConsumerCount(consumerCount);
@@ -75,9 +77,7 @@ public class SqsMessageListener {
     this.consumerCount = consumerCount;
   }
 
-  /**
-   * Set the thread pool that will invoke the {@linkplain MessageHandler}
-   */
+  /** Set the thread pool that will invoke the {@linkplain MessageHandler} */
   public void setTaskExecutor(ExecutorService taskExecutor) {
     this.taskExecutor = taskExecutor;
   }
@@ -93,8 +93,8 @@ public class SqsMessageListener {
 
   public synchronized void initialize() {
     consumerLoopExecutor = createConsumerLoopExecutor();
-    taskExecutor = Objects
-        .requireNonNullElseGet(taskExecutor, this::defaultMessageProcessorExecutor);
+    taskExecutor =
+        Objects.requireNonNullElseGet(taskExecutor, this::defaultMessageProcessorExecutor);
   }
 
   public synchronized void start() {
@@ -117,16 +117,20 @@ public class SqsMessageListener {
   }
 
   private ExecutorService createConsumerLoopExecutor() {
-    return Executors.newFixedThreadPool(consumerCount,
-        ConfigurableThreadFactory.newFactory(CONSUMER_LOOP_THREAD_PREFIX));
+    return Executors.newFixedThreadPool(
+        consumerCount, ConfigurableThreadFactory.newFactory(CONSUMER_LOOP_THREAD_PREFIX));
   }
 
   private ExecutorService defaultMessageProcessorExecutor() {
     int poolSize = consumerCount * queue.getMaxBatchSize() + 1;
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(poolSize, poolSize,
-        120L, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<>(),
-        ConfigurableThreadFactory.newFactory(MESSAGE_PROCESSOR_THREAD_PREFIX));
+    ThreadPoolExecutor executor =
+        new ThreadPoolExecutor(
+            poolSize,
+            poolSize,
+            120L,
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            ConfigurableThreadFactory.newFactory(MESSAGE_PROCESSOR_THREAD_PREFIX));
 
     // Allow idle core threads to time out
     executor.allowCoreThreadTimeOut(true);
@@ -135,7 +139,8 @@ public class SqsMessageListener {
 
   private void scheduleConsumers() {
     for (int i = 0; i < consumerCount; i++) {
-      consumerMap.computeIfAbsent(UUID.randomUUID().toString(),
+      consumerMap.computeIfAbsent(
+          UUID.randomUUID().toString(),
           consumerId -> consumerLoopExecutor.submit(new QueueConsumer(queue, consumerId)));
     }
   }
@@ -143,9 +148,7 @@ public class SqsMessageListener {
   private void terminate() {
     consumerMap.values().forEach(consumer -> consumer.cancel(false));
     consumerMap.clear();
-
-    taskExecutor.shutdown();
-    consumerLoopExecutor.shutdown();
+    shutdown();
 
     try {
       boolean taskExecTerminated = taskExecutor.awaitTermination(20, TimeUnit.SECONDS);
@@ -158,6 +161,11 @@ public class SqsMessageListener {
     }
   }
 
+  private void shutdown() {
+    taskExecutor.shutdown();
+    consumerLoopExecutor.shutdown();
+  }
+
   private boolean isActive(String consumerId) {
     Future<?> consumer = consumerMap.get(consumerId);
     return consumer != null && !consumer.isDone();
@@ -167,14 +175,15 @@ public class SqsMessageListener {
 
     // increase
     while (consumerMap.size() < concurrentConsumers) {
-      consumerMap.computeIfAbsent(UUID.randomUUID().toString(),
+      consumerMap.computeIfAbsent(
+          UUID.randomUUID().toString(),
           consumerId -> consumerLoopExecutor.submit(new QueueConsumer(queue, consumerId)));
     }
 
     // decrease
     if (consumerMap.size() > concurrentConsumers) {
-      Enumeration<Future<?>> consumers = ((ConcurrentHashMap<String, Future<?>>) consumerMap)
-          .elements();
+      Enumeration<Future<?>> consumers =
+          ((ConcurrentHashMap<String, Future<?>>) consumerMap).elements();
       int delta = consumerMap.size() - concurrentConsumers;
       for (int i = 0; i < delta; i++) {
         if (consumers.hasMoreElements()) {
@@ -198,27 +207,32 @@ public class SqsMessageListener {
     @Override
     public void run() {
       while (isActive(id)) {
-        ReceiveMessageResponse response = receive(queue);
-
-        int batchSize = response.messages().size();
-        CountDownLatch completionLatch = new CountDownLatch(batchSize);
-
-        // collect successfully processed messages to auto-acknowledge
-        List<Message> successful = new ArrayList<>(batchSize);
-
-        for (Message msg : response.messages()) {
-          taskExecutor
-              .submit(new MessageProcessor(queue, msg, completionLatch, successful::add));
-        }
-
         try {
-          completionLatch.await();
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        }
+          ReceiveMessageResponse response = receive(queue);
 
-        if (queue.isAutoAcknowledge()) {
-          deleteBatch(successful, queue);
+          int batchSize = response.messages().size();
+          CountDownLatch completionLatch = new CountDownLatch(batchSize);
+
+          // collect successfully processed messages to auto-acknowledge
+          List<Message> successful = new ArrayList<>(batchSize);
+
+          for (Message msg : response.messages()) {
+            taskExecutor.submit(new MessageProcessor(queue, msg, completionLatch, successful::add));
+          }
+
+          try {
+            completionLatch.await();
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+
+          if (queue.isAutoAcknowledge()) {
+            deleteBatch(successful, queue);
+          }
+        } catch (Throwable t) {
+          log.error("Unhandled exception in QueueConsumer", t);
+          shutdown();
+          break;
         }
       }
     }
@@ -231,7 +245,9 @@ public class SqsMessageListener {
     private final CountDownLatch completionLatch;
     private final Consumer<Message> onSuccess;
 
-    private MessageProcessor(SqsQueue queue, Message message,
+    private MessageProcessor(
+        SqsQueue queue,
+        Message message,
         CountDownLatch completionLatch,
         Consumer<Message> onSuccess) {
       this.queue = queue;
@@ -259,12 +275,13 @@ public class SqsMessageListener {
   }
 
   private ReceiveMessageResponse receive(SqsQueue queue) {
-    ReceiveMessageRequest request = ReceiveMessageRequest.builder()
-        .queueUrl(queue.getUrl())
-        .waitTimeSeconds(queue.isLongPolling() ? 20 : 1)
-        .maxNumberOfMessages(queue.getMaxBatchSize())
-        .visibilityTimeout(queue.getVisibilityTimeoutSeconds())
-        .build();
+    ReceiveMessageRequest request =
+        ReceiveMessageRequest.builder()
+            .queueUrl(queue.getUrl())
+            .waitTimeSeconds(queue.isLongPolling() ? 20 : 1)
+            .maxNumberOfMessages(queue.getMaxBatchSize())
+            .visibilityTimeout(queue.getVisibilityTimeoutSeconds())
+            .build();
 
     try {
       return sqsClient.receiveMessage(request);
@@ -272,9 +289,9 @@ public class SqsMessageListener {
       log.error("SQS sdk receiveMessage error", e);
 
       // aws sdk exceptions usually mean that we have some network problem or actual service is down
-      // pause the loop for 2 seconds
+      // pause the loop for 5 seconds
       try {
-        TimeUnit.SECONDS.sleep(2);
+        TimeUnit.SECONDS.sleep(5);
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
       }
@@ -283,22 +300,23 @@ public class SqsMessageListener {
   }
 
   private void deleteBatch(List<Message> messages, SqsQueue queue) {
-    List<DeleteMessageBatchRequestEntry> entries = messages.stream()
-        .map(message -> DeleteMessageBatchRequestEntry.builder()
-            .id(message.messageId())
-            .receiptHandle(message.receiptHandle())
-            .build())
-        .collect(Collectors.toList());
+    List<DeleteMessageBatchRequestEntry> entries =
+        messages.stream()
+            .map(
+                message ->
+                    DeleteMessageBatchRequestEntry.builder()
+                        .id(message.messageId())
+                        .receiptHandle(message.receiptHandle())
+                        .build())
+            .collect(Collectors.toList());
 
     if (entries.isEmpty()) {
       return;
     }
 
     try {
-      sqsClient.deleteMessageBatch(DeleteMessageBatchRequest.builder()
-          .queueUrl(queue.getUrl())
-          .entries(entries)
-          .build());
+      sqsClient.deleteMessageBatch(
+          DeleteMessageBatchRequest.builder().queueUrl(queue.getUrl()).entries(entries).build());
     } catch (AwsServiceException | SdkClientException e) {
       log.error("SQS sdk deleteMessageBatch error", e);
     }
