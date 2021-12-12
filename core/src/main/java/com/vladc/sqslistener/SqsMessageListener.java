@@ -145,8 +145,6 @@ public class SqsMessageListener implements MessageListener {
     try {
       return sqsClient.receiveMessage(request);
     } catch (AbortedException ae) {
-      log.error("{} - receive interrupted", queue.getUrl());
-      Thread.currentThread().interrupt();
       return ReceiveMessageResponse.builder().messages(List.of()).build();
     } catch (SdkClientException | SqsException e) {
       log.error("{} - SQS sdk receiveMessage error", queue.getUrl(), e);
