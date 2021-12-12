@@ -2,21 +2,18 @@ package com.vladc.sqslistener.annotation;
 
 import com.vladc.sqslistener.ErrorHandler;
 import com.vladc.sqslistener.SqsMessageListener;
-import com.vladc.sqslistener.SqsQueue;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import org.intellij.lang.annotations.Language;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 
 /**
- * Configures new {@linkplain SqsMessageListener} using annotation arguments. Annotated method will
- * be registered as message handler for created listener. Currently supported signatures:
+ * Configures new {@linkplain SqsMessageListener} using annotation arguments. Annotated beans will
+ * be registered as message handler for created listener. Currently, supported signatures:
  *
  * <ul>
  *   <li>{@link Message} complete SQS message being processed.
@@ -26,36 +23,22 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
  *
  * <ul>
  *   <li>Any exception thrown for this method will be caught and logged by listener
- *   <li>A bean provided in {@linkplain SqsMessageHandler#exceptionHandler()} will be called
- *   <li>Exception will prevent message from being auto-acknowledged if {@linkplain #ackMode()} is
- *       set to AUTO
+ *   <li>A bean provided in {@linkplain SqsListener#exceptionHandler()} will be called
  * </ul>
  *
  * @see SqsMessageListener
- * @see com.vladc.sqslistener.MessageListenerAnnotatedMethodBeanPostProcessor
- * @see com.vladc.sqslistener.SqsMessageListenerManager
- * @see EnableSqs
  */
-@Target({ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface SqsMessageHandler {
+public @interface SqsListener {
 
   /**
    * AWS SQS queue url.
    *
    * @return the queue url or expression (SpEL)
    */
-  @Language("SpEL")
-  String queueUrl() default "";
-
-  /**
-   * {@linkplain SqsQueue} bean. Attributes specified in SqsQueue bean take precedence over
-   * annotation attributes. Use SpEL expression e.g {@code @SqsMessageHandler(queue =
-   * "#{@myQueue}")}.
-   */
-  @Language("SpEL")
-  String queue() default "";
+  String url() default "";
 
   /**
    * Maximum number of messages to return from single receiveMessage call. Valid values: 1 to 10.
@@ -63,7 +46,6 @@ public @interface SqsMessageHandler {
    * @return maximum batch size or expression (SpEL)
    * @see ReceiveMessageRequest#maxNumberOfMessages()
    */
-  @Language("SpEL")
   String maxBatchSize() default "10";
 
   /**
@@ -72,32 +54,20 @@ public @interface SqsMessageHandler {
    *
    * @see ReceiveMessageRequest#visibilityTimeout()
    */
-  @Language("SpEL")
   String visibilityTimeout() default "60";
 
   /** Number of threads polling from this queue. */
-  @Language("SpEL")
   String concurrency() default "1";
+
+  /**
+   * {@linkplain ErrorHandler} bean that will be called when @SqsMessageListener method throws an
+   * exception
+   */
+  String exceptionHandler() default "";
 
   PollMode pollMode() default PollMode.LONG;
 
   AckMode ackMode() default AckMode.AUTO;
-
-  /**
-   * {@linkplain ThreadPoolTaskExecutor} bean that will be used for executing SqsMessageHandler
-   * annotated methods. Use SpEL expression e.g {@code @SqsMessageHandler(queueName = "queue",
-   * executor = "#{@sqsListenerExec}")}. Note that bean must be {@linkplain ThreadPoolTaskExecutor}
-   * type
-   */
-  @Language("SpEL")
-  String executor() default "";
-
-  /**
-   * {@linkplain ErrorHandler} bean that will be called when @SqsMessageHandler method throws an
-   * exception
-   */
-  @Language("SpEL")
-  String exceptionHandler() default "";
 
   enum AckMode {
 
@@ -128,7 +98,7 @@ public @interface SqsMessageHandler {
 
     /**
      * Wait up to 1 second for the message to become available before making request to SQS. Is far
-     * less cost efficient comparing to PollMode.LONG - use only for high-volume queues under
+     * less cost-efficient comparing to PollMode.LONG - use only for high-volume queues under
      * constant load.
      *
      * @see ReceiveMessageRequest#waitTimeSeconds()

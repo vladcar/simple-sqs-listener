@@ -1,5 +1,6 @@
 package com.vladc.sqslistener.annotation;
 
+import com.vladc.sqslistener.AnnotationSqsMessageListenerAutoConfiguration;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,13 +8,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Enables autoconfiguration and {@linkplain SqsMessageHandler} method discovery
+ * Enables SQS listener autoconfiguration
  *
- * @see com.vladc.sqslistener.autoconfigure.AnnotationSqsMessageListenerAutoConfiguration
+ * @see AnnotationSqsMessageListenerAutoConfiguration
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface EnableSqs {
-
-}
+public @interface EnableSqs {}

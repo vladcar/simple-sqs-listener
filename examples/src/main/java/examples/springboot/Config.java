@@ -1,14 +1,15 @@
 package examples.springboot;
 
-import com.vladc.sqslistener.SqsQueue;
+import com.vladc.sqslistener.HandlerInterceptor;
 import com.vladc.sqslistener.annotation.EnableSqs;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
+@Slf4j
 @EnableSqs
 @Configuration
 public class Config {
@@ -22,6 +23,14 @@ public class Config {
     executor.setKeepAliveSeconds(120);
     executor.setThreadNamePrefix("sqsListener-");
     return executor;
+  }
+
+  @Bean
+  public HandlerInterceptor loggingFilter() {
+    return message -> {
+      log.info("processing message: {}", message.messageId());
+      log.info("filter invoked");
+    };
   }
 
   @Bean
