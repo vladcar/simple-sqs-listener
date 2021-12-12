@@ -48,7 +48,7 @@ public class AnnotationSqsMessageListenerAutoConfiguration {
   }
 
   @Bean(name = "messageProcessorExecutor")
-  @ConditionalOnMissingBean
+  @ConditionalOnMissingBean(name = "messageProcessorExecutor")
   public ThreadPoolTaskExecutor messageProcessorExecutor(MessageListenerProperties properties) {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
     executor.setCorePoolSize(properties.getPoolSize());
